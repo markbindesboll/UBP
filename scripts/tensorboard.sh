@@ -1,25 +1,19 @@
 #!/bin/bash
-### Serve TensorBoard for the UBP runs on the current login node.
+### Serve TensorBoard for the UBP runs on the local workstation.
 ###
 ###   /bin/bash scripts/tensorboard.sh [PORT]
 ###
-### Then from your laptop, tunnel to the SAME login node this runs on:
-###   ssh -L 6006:localhost:6006 s193209@login.hpc.dtu.dk
+### Then from your laptop, tunnel to this workstation:
+###   ssh -L 6006:localhost:6006 s193209@comp-ws6211
 ### and open http://localhost:6006
 ###
-### Why the PYTHONPATH dance: the `ubp` env has tensorboard 2.14, which is
-### incompatible with numpy 2 (`np.string_` was removed) and with setuptools>=81
-### (no pkg_resources). Rather than upgrade tensorboard inside `ubp` -- which would
-### swap files under any running training job -- a newer tensorboard is installed
-### standalone on /work3 and put ahead of the env on sys.path. TB 2.19 is pinned
-### because 2.21's protobuf gencode needs protobuf 6.x while the env has 5.28.
-### Everything else (numpy, grpcio, werkzeug, tensorboard-data-server) comes from `ubp`.
+### (Includes the PYTHONPATH dance for tensorboard 2.19.0 compatibility)
 
 set -euo pipefail
 
 PORT=${1:-6006}
-LOGDIR=${LOGDIR:-/work3/s193209/data/ubp_exp}
-TB_PREFIX=/work3/s193209/pyenvs/tb
+LOGDIR=${LOGDIR:-/data/thingseeg2/ubp_exp}
+TB_PREFIX="$HOME/tb_standalone"
 PYBIN="$HOME/miniforge3/envs/ubp/bin/python"
 
 if [ ! -d "$TB_PREFIX" ]; then
@@ -28,8 +22,9 @@ if [ ! -d "$TB_PREFIX" ]; then
 fi
 
 echo "logdir : $LOGDIR"
-echo "host   : $(hostname)  (tunnel to this exact login node)"
-echo "url    : http://localhost:${PORT} after: ssh -L ${PORT}:localhost:${PORT} $USER@login.hpc.dtu.dk"
+echo "host   : $(hostname)"
+echo "url    : http://localhost:${PORT} after running this on your laptop:"
+echo "         ssh -L ${PORT}:localhost:${PORT} $USER@comp-ws6211"
 
 PYTHONPATH="$TB_PREFIX" exec "$PYBIN" -m tensorboard.main \
     --logdir "$LOGDIR" \

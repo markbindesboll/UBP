@@ -4,7 +4,8 @@ import numpy as np
 
 # Base paths for the experiments (add as many as you like)
 experiments = {
-    "EEGProjectLayer_RN50": "/work3/s193209/data/ubp_exp/eeg_intra-subject_ubp_EEGProjectLayer_RN50",
+    "Intra-Subject RN50": "/data/thingseeg2/ubp_exp/eeg_intra-subject_ubp_EEGProjectLayer_RN50",
+    "Inter-Subject RN50": "/data/thingseeg2/ubp_exp/eeg_inter-subject_ubp_EEGProjectLayer_RN50",
 }
 
 subjects = [f"sub-{i:02d}" for i in range(1, 11)]

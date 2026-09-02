@@ -3,6 +3,7 @@ from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
+torch.set_float32_matmul_precision('high') #For WS6211
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import TensorBoardLogger
 import shutil
@@ -107,7 +108,7 @@ class PLModel(pl.LightningModule):
         batch_size = batch['idx'].shape[0]
         eeg_z, img_z, loss = self(batch,sample_posterior=True)
 
-        self.log('train_loss', loss, on_step=True, on_epoch=True,prog_bar=True, logger=True, sync_dist=True, batch_size=batch_size)
+        self.log('train_loss', loss, on_step=False, on_epoch=True,prog_bar=True, logger=True, sync_dist=True, batch_size=batch_size)
 
         eeg_z = eeg_z/eeg_z.norm(dim=-1, keepdim=True)
         
@@ -151,6 +152,11 @@ class PLModel(pl.LightningModule):
         self.all_predicted_classes.append(top_k_indices.cpu().numpy())
         label = torch.arange(0, batch_size).to(self.device)
         self.all_true_labels.extend(label.cpu().numpy())
+
+        current_scale = self.brain.softplus(self.brain.logit_scale)
+        current_temp = 1.0 / current_scale
+        self.log('val_temperature', current_temp, on_step=False, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+
 
         return loss
     
@@ -227,18 +233,6 @@ class PLModel(pl.LightningModule):
 
         order = sim.argsort(dim=-1, descending=True)
         rank = (order == true[:, None]).float().argmax(dim=1) + 1
-        # Plain floats, not CPU tensors: these are computed on CPU, and self.log with
-        # sync_dist=True would hand a CPU tensor to the NCCL backend and raise
-        # "No backend type associated with device type cpu".
-        top1 = (order[:, 0] == true).float().mean().item()
-        top5 = (order[:, :min(5, n_img)] == true[:, None]).any(dim=1).float().mean().item()
-        mAP = (1.0 / rank.float()).mean().item()
-
-        self.log('test_top1_acc_gallery', top1, sync_dist=True)
-        self.log('test_top5_acc_gallery', top5, sync_dist=True)
-        self.log('mAP_gallery', mAP, sync_dist=True)
-        print(f'gallery retrieval over {n_img} images x {n_reps} reps: '
-              f'top1={top1:.4f} top5={top5:.4f} mAP={mAP:.4f}')
 
         out = os.path.join(self.trainer.logger.log_dir, 'test_embeddings.pt')
         torch.save({
@@ -401,7 +395,16 @@ def main():
             mode='min' 
         )
 
-    trainer = Trainer(log_every_n_steps=10, strategy=DDPStrategy(find_unused_parameters=False),callbacks=[early_stop_callback, checkpoint_callback],max_epochs=config['train']['epoch'], devices=[device],accelerator='cuda',logger=logger)
+    trainer = Trainer(
+            log_every_n_steps=10, 
+            strategy=DDPStrategy(find_unused_parameters=False),
+            callbacks=[early_stop_callback, checkpoint_callback],
+            max_epochs=config['train']['epoch'], 
+            devices=[device],
+            accelerator='cuda',
+            logger=logger,
+            enable_progress_bar=False  
+        )
     print(trainer.logger.log_dir)
 
     ckpt_path = 'last' #None

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 1. Load the embeddings safely
-file_path = "/work3/s193209/data/ubp_exp/eeg_intra-subject_ubp_EEGProjectLayer_ViT-H-14_noavg/sub-01_seed0/test_embeddings.pt"
+file_path = "/data/thingseeg2/ubp_exp/eeg_intra-subject_ubp_EEGProjectLayer_RN50_noavg/sub-08_seed0/test_embeddings.pt"
 data = torch.load(file_path, map_location="cpu", weights_only=False)
 
 eeg_z = data['eeg_z'].float()  # [n_reps, n_images, 1024] or [n_images, n_reps, 1024]
@@ -59,7 +59,9 @@ for k in range(1, max_reps + 1):
     top1_means.append(np.mean(top1_runs) * 100)
     top5_means.append(np.mean(top5_runs) * 100)
 
-# Extract scores for max available repetitions (e.g. 80 reps)
+# Extract scores for 1 Rep (single-trial) and max repetitions
+rep1_t1 = top1_means[0]
+rep1_t5 = top5_means[0]
 final_t1 = top1_means[-1]
 final_t5 = top5_means[-1]
 
@@ -70,18 +72,26 @@ plt.figure(figsize=(9, 5.5), dpi=150)
 plt.plot(x_reps, top1_means, label='Top-1 Accuracy', color='#1f77b4', linewidth=2)
 plt.plot(x_reps, top5_means, label='Top-5 Accuracy', color='#ff7f0e', linewidth=2)
 
-plt.title(f'Retrieval Accuracy vs EEG Repetitions (10 Draws Avg)\n'
-          f'Final ({max_reps} Reps) - Top-1: {final_t1:.2f}% | Top-5: {final_t5:.2f}%', 
-          fontsize=12, fontweight='bold')
+# Multi-line title with both 1-Rep and Final results
+plt.title(
+    f'Retrieval Accuracy vs EEG Repetitions ({n_draws} Draws Avg)\n'
+    f'1 Rep Result: Top-1 {rep1_t1:.2f}% | Top-5 {rep1_t5:.2f}%\n'
+    f'Final ({max_reps} Reps): Top-1 {final_t1:.2f}% | Top-5 {final_t5:.2f}%',
+    fontsize=11,
+    fontweight='bold'
+)
+
 plt.xlabel('Number of Repetitions Averaged', fontsize=11)
 plt.ylabel('Zero-Shot Retrieval Accuracy (%)', fontsize=11)
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.xlim(1, max_reps)
-plt.ylim(0, 105)
+plt.ylim(5, 80)
 plt.legend(frameon=True, loc='lower right')
 plt.tight_layout()
 
 # Save and show
 plt.savefig('retrieval_accuracy_vs_reps.png')
 plt.show()
-print(f"Done! {max_reps} Reps Result -> Top-1: {final_t1:.2f}%, Top-5: {final_t5:.2f}%")
+
+print(f"1 Rep Result  -> Top-1: {rep1_t1:.2f}%, Top-5: {rep1_t5:.2f}%")
+print(f"{max_reps} Reps Result -> Top-1: {final_t1:.2f}%, Top-5: {final_t5:.2f}%")

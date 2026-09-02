@@ -13,10 +13,11 @@ models:
         z_dim: ${z_dim}
         timesteps: ${timesteps}
 
+data_root: /data/thingseeg2
 data:
-  data_dir: /work3/s193209/data/eeg_preprocessed_250hz/ubp_format/Preprocessed_data_250Hz_whiten
-  image_dir: /work3/s193209/data/images/Image_set_Resize
-  feature_dir: /work3/s193209/data/eeg_preprocessed_250hz/ubp_format/Image_feature
+  data_dir: "${data_root}/eeg_preprocessed_250hz/ubp_format/Preprocessed_data_250Hz_whiten"
+  image_dir: "${data_root}/images/Image_set_Resize"
+  feature_dir: "${data_root}/eeg_preprocessed_250hz/ubp_format/Image_feature"
   selected_ch: ['P7', 'P5', 'P3', 'P1','Pz', 'P2', 'P4', 'P6', 'P8', 'PO7', 'PO3', 'POz', 'PO4', 'PO8','O1', 'Oz', 'O2']
   model_type: ${vision_backbone}
   feature_name: "${vision_backbone}_ua_k${blur_kernel_size}_g${system_g}_c${c}"
@@ -44,5 +45,5 @@ train:
   lr: ${lr}
   
 save_embeddings: true
-
-save_dir: /work3/s193209/data/ubp_exp
+pyt
+save_dir: ${data_root}/ubp_exp
